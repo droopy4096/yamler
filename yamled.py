@@ -3,14 +3,14 @@
 import sys
 import ruamel.yaml as ryaml
 import argparse
-import jmespath
 import scalpl
 import json
 import logging
 
 log=logging.getLogger(__name__)
 
-import addict
+# import addict
+# import jmespath
 
 def join_path(path):
     if len(path)<1:
@@ -76,7 +76,6 @@ def create_leaf(data, setter):
         parent_path=error.parent_path
         child_path=error.child_path
         log.debug("No Child for \n\tparent:{0}\n\tat path:{1}\n\tcan't establish child path:{2}".format(str(parent),str(parent_path),str(child_path)))
-        # new_dict=addict.Dict()
         # create child branch:
         child_branch={}
         child_branch_key=parent_path[-1]
@@ -89,7 +88,10 @@ def create_leaf(data, setter):
                 child[key]=setter['value']
         log.debug("Generated Child branch: {0}".format(str(child_branch)))
         if isinstance(parent, list):
+            # we don't seem to reach this block
+            log.debug("Parent is a list: parent:{0} parent_path:{1} child_path:{2}".format(str(parent), str(parent_path), str(child_path)))
             dict_replacement={ i: elem for i,elem in enumerate(parent) }
+            log.debug("Replacement dict: {0}".format(str(dict_replacement)))
             safe_set(data, parent_path, dict_replacement)
             log.debug("Found list, converted to dict: {0}".format(str(dict_replacement)))
             processor=scalpl.Cut(data)
@@ -101,6 +103,7 @@ def create_leaf(data, setter):
             # raise Exception("Unknown exception")
             pass
         else:
+            log.debug("Parent a scalar: parent:{0} parent_path:{1} child_path:{2}".format(str(parent), str(parent_path), str(child_path)))
             safe_set(data, parent_path, {})
         log.debug("Before safe_set: {0}".format(str(data)))
         safe_set(data, parent_path+[child_branch_key], child_branch)
@@ -116,8 +119,6 @@ def create_leaf(data, setter):
         parent_path=error.parent_path
         child_path=error.child_path
         log.debug("No Child for \n\tparent:{0}\n\tat path:{1}\n\tcan't establish child path:{2}".format(str(parent),str(parent_path),str(child_path)))
-        # new_dict=addict.Dict()
-        # create child branch:
         child_branch={}
         child_branch_key=child_path[0]
         child=child_branch
@@ -132,29 +133,14 @@ def create_leaf(data, setter):
             log.debug("Parent is a list: parent:{0} parent_path:{1} child_path:{2}".format(str(parent), str(parent_path), str(child_path)))
             if isinstance(child_branch_key, int):
                 parent.append(child_branch[child_branch_key])
-            ### dict_replacement={ i: elem for i,elem in enumerate(parent) }
-            ### safe_set(data, parent_path, dict_replacement)
-            ### print("Found list, converted to dict: {0}".format(str(dict_replacement)))
-            ### processor=scalpl.Cut(data)
-            ### print("New state: {0}".format(str(processor[join_path(parent_path)])))
-            ### # processor.update({ join_path(parent_path+[child_branch_key]): child_branch})
         elif isinstance(parent, dict):
-            ## why would that even trigger
             log.debug("Parent is a dict: parent:{0} parent_path:{1} child_path:{2}".format(str(parent), str(parent_path), str(child_path)))
             # raise Exception("Unknown exception")
-            ###MERGE processor=scalpl.Cut(parent)
             log.debug("Scalped parent: {0}".format(str(parent)))
-            ###MERGE processor.update({ parent_path[-1]: child_branch})
             safe_set(data, parent_path, child_branch)
         else:
             safe_set(data, parent_path, {})
             safe_set(data, parent_path, child_branch)
-
-        ### print("Before safe_set: {0}".format(str(data)))
-        ### safe_set(data, parent_path, child_branch)
-        ### print("After safe_set: {0}".format(str(data)))
-        # processor=scalpl.Cut(parent)
-        # processor.update(child_branch)
 
 def update_leaf(data, setter):
     try:
@@ -241,7 +227,7 @@ if __name__ == "__main__":
         ch = logging.StreamHandler()
         ch.setLevel(logging.DEBUG)
         # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        formatter = logging.Formatter('%(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(levelname)s %(lineno)s - %(message)s')
         ch.setFormatter(formatter)
         log.addHandler(ch)
 
