@@ -68,6 +68,34 @@ def safe_set(data, keys, new_value):
         raise NoChild(value, keys[i+1:], keys[:i+1])
     return value
 
+def safe_merge(data, keys, new_value):
+    log.debug("In\n\t{0}\n\tsetting the keys:{1}\n\twith new value:{2}".format(str(data),str(keys),str(new_value)))
+    value = data
+    i = 0
+    key = None
+    if len(keys)<1:
+        return data
+    try:
+        for i, key in enumerate(keys[:-1]):
+            value = value[key]
+        cur_val=value[keys[-1]]
+        if isinstance(cur_val, list) and isinstance(new_value,list):
+            value[keys[-1]].extend(new_value)
+        elif isinstance(cur_val, dict) and isinstance(new_value,dict):
+            value[keys[-1]].update(new_value)
+        else:
+            value[keys[-1]]=new_value
+    except KeyError as error:
+        log.debug("Exception: K val:{0} key:{1} keys:{2}".format(str(value), str(key), str(keys)) )
+        raise NoChild(value, keys[i+1:], keys[:i+1])
+    except IndexError as error:
+        log.debug("Exception: I val:{0} key:{1} keys:{2}".format(str(value), str(key), str(keys)) )
+        raise NoChild(value, keys[i+1:], keys[:i+1])
+    except TypeError:
+        log.debug("Exception: T val:{0} key:{1} keys:{2}".format(str(value), str(key), str(keys)) )
+        raise NoChild(value, keys[i+1:], keys[:i+1])
+    return value
+
 def create_leaf(data, setter):
     try:
         leaf=safe_set(data, setter["path"], setter["value"])
@@ -144,7 +172,7 @@ def create_leaf(data, setter):
 
 def update_leaf(data, setter):
     try:
-        leaf=safe_set(data, setter["path"], setter["value"])
+        leaf=safe_merge(data, setter["path"], setter["value"])
     except NoChild as error:
         parent=error.parent
         parent_path=error.parent_path
@@ -205,9 +233,11 @@ def process_data(data, setters, mergers):
 
     for merger in mergers:
         try:
-            processor.update({merger['jmespath']: merger['value']})
-        except (KeyError, IndexError):
             update_leaf(data, merger)
+            # processor.update({merger['jmespath']: merger['value']})
+        except (KeyError, IndexError):
+            # update_leaf(data, merger)
+            pass
 
     
 if __name__ == "__main__":
